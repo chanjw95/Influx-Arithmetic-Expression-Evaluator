@@ -1,0 +1,342 @@
+Script started on Wed 30 Mar 2016 12:00:02 PM EDT
+]0;chanj@erdos:proj3[chanj@erdos proj3]$ cat proj2[K3.cc
+/** @mainpage
+ *
+ * CISC 2200: Data Structures<br/>
+ * Project 3: Evaluating Infix Arithmetic Expressions
+ *
+ * <p>A stack-based program that repeatedly : </p>
+ * <ul>
+ * <li>reads an expression from standard input, </li>
+ * <li>computes the value of that expression, and </li>
+ * <li>prints the expression's value.</li>
+ * </ul>
+ * @author Justin Chan
+ * @date 30 Marcch 2016
+ * @file proj3.cc
+ ************************************************************************/
+#include <iostream>
+#include <stack>
+#include <stdexcept>
+#include <string>
+using namespace std;
+
+using ValueType = int;
+
+/**
+ * Determine the value of an infix expression
+ *
+ * @param expr a string, supposedly representing an infix expression
+ * @return the value of <code>expr</code>
+ */
+ValueType processExpression(const string& expr);
+bool isValidResponse(char response);
+bool isYesResponse(char response);
+int precendence(char op);
+void execute(stack<ValueType>& valStack,stack<char>& opStack);
+void provideHelpIfNecessary();
+ValueType doOperation(ValueType operandL, char operation,ValueType operandR);
+
+int main()
+{
+    provideHelpIfNecessary();
+    cin.ignore();
+    
+    while(true)
+    {
+	cout << "Expression? " ;
+	string expr;
+	getline(cin, expr);
+	
+	if(expr.length() == 0)
+	    break;
+	ValueType result = processExpression(expr);
+	cout << result << endl;
+    }
+    cout << endl;
+    return 0;
+}
+
+/**
+ * Print a help message if the user wants one.
+ */
+void provideHelpIfNecessary()
+{
+    char response;
+    cout << "Do you need help (Y/N)? ";
+    cin >> response;
+    isValidResponse(response);
+}
+
+/**
+ * Is a character a valid response?
+ * @param response the first char inthe user's response
+ * @pre response is a valid character
+ * @return true iff <code>response</code> is one of the following:
+ * 'Y','y','N','n','T','t','F','f','1','0'
+ */
+bool isValidResponse(char response)
+{
+    char responseArray[] = {'Y','y','T','t','1','N','n','F','f','0'};
+    for(int i = 0;i < 10;i++)
+    {
+	if(response == responseArray[i])
+	{
+	    bool isYes = isYesResponse(response);
+	    if(isYes == false)
+		return false;
+	    return true;
+	}
+    }
+	cout << "Response must be 'Y' or 'N'." << endl;
+	main();
+	return true;
+}
+
+/**
+ * Is a character a "yes" response?
+ * @pre response is a valid response(in the sense of
+ <code>isValidResponse</code>)
+ * @return true iff Response is one of the following:
+ 'Y','y',T','t','1'
+*/
+bool isYesResponse(char response)
+{
+    char yesArray[] = {'Y','y','T','t','1'};
+    for(int j = 0;j < 5;j++)
+    {
+	if(response == yesArray[j])
+	{
+	    cout << "Enter an infix expression at the prompt.\n"
+		 << "The program will tell you its value.\n"
+		 << "To stop the program, just hit 'return' at the prompt."
+		 << endl;
+	    return true;
+	}
+    }
+    return false;
+		
+}
+
+/**
+ * Determine the precedence of an operator.
+ * @param op the operator in question
+ * @pre <code>op</code> is one of '+','-','*','/'
+ * @return <ul>3 for multiplicative operations</ul>
+   <ul>2 for additive operations</ul>
+   <ul>1 for illegal operation</ul>
+*/
+int precedence(char op)
+{
+    if(op == '*' || op == '/')
+	return 3;
+    if(op == '+' || op == '-')
+	return 2;
+    else
+	return 1;
+}
+
+/**
+ * Determine the value of an infix expression.
+ * @param expr a string, supposedly representing an infix expression
+ * @return the value of <code>expr</code>
+ */
+ValueType processExpression(const string& expr)
+{
+    stack<ValueType> valStack;
+    stack<char> opStack;
+    
+    for(unsigned int i = 0;i < expr.length();i++)
+    {
+	if(isdigit(expr[i]))
+	{
+	    valStack.push(expr[i]);
+	    valStack.top() -= 48; //-48 because of ASCII range
+	}
+	else
+	    opStack.push(expr[i]);
+    }
+    
+    if(valStack.size() == 1 && opStack.size() == 0)
+	return valStack.top();
+  
+    else
+    { 
+	execute(valStack,opStack);
+	return  valStack.top();
+    }
+}
+
+/** 
+ * Do a binary operation.
+ * @param operandL the left operand
+ * @param operation the operation to be performed
+ * @param operandR the right operand
+ * @return the result of the operation
+ */
+ValueType doOperation(ValueType operandL,char operation,ValueType operandR)
+{
+    ValueType result;
+    int op = precedence(operation);
+
+    if(op == 3)
+    {
+	if(operation == '*')
+	    result = operandL * operandR;
+	else
+	    result = operandL / operandR;
+    }
+    
+    if(op == 2)
+    {
+	if(operation == '+')
+	    result = operandL + operandR;
+	else
+	    result = operandL - operandR;
+    }
+    return result;
+	
+}
+
+/**
+ * Do the binary operation using the top element of an operand stack
+ and the top two elements an operator stack.
+ * @param valStack a stack of operands
+ * @param opStack a stack of operators
+ * @post the binary opeartion at the top of <code>opStack</code> is
+ applied to the operands at the top of the <code>valStack</code> and
+ this value is pushed to the top of <code>valStack</code>
+*/
+void execute(stack<ValueType>& valStack,stack<char>& opStack)
+{
+    ValueType result;
+    ValueType operandR;
+    char operation;
+
+    while(!valStack.empty() && !opStack.empty())
+    {
+	//to deal with parentheses
+	if(opStack.top() == ')' || opStack.top() == '(')
+	{
+	    opStack.pop();
+     
+	    if(valStack.size() == 1)
+	    {
+		result = valStack.top();
+		valStack.push(result);
+		break;
+	    }
+	    
+	    while(opStack.top() == '(')
+		opStack.pop();
+
+	    operation = opStack.top();
+	    if(opStack.size() > 1)
+	    {
+		opStack.pop();
+		
+		if(opStack.top() == ')')
+		{
+		    if(operation != ')' && operation != '(')
+		    {
+			operandR = valStack.top();
+			valStack.pop();
+			execute(valStack,opStack);
+			//use recursion to get past the parentheses
+		    }
+
+		    if(operation == ')')
+		    {
+		      
+			while(opStack.top() == ')')
+			{
+			    opStack.pop();
+			    operation = opStack.top();
+			}
+			opStack.pop();
+		    }
+		}
+	  
+		while(opStack.top() == '(') {
+		    if(opStack.size() == 1)
+			break;
+		    opStack.pop();
+		}
+		if(operation == ')')
+		    execute(valStack,opStack); //recursion to get past parentheses
+	    }
+	    if(operation == ')')
+		break;
+	    operandR = valStack.top();
+	    valStack.pop();
+
+	    result = doOperation(valStack.top(),operation,operandR);
+	}
+    
+	else
+	{
+	    if(valStack.size() == 1)
+	    {
+		result = valStack.top();
+		valStack.push(result);
+		break;
+	    }
+ 
+	    operandR = valStack.top();
+	    valStack.pop();
+	    
+	    operation = opStack.top();
+	    if(opStack.size() > 1)
+	    {
+		
+		while(opStack.top() == '(')
+		    opStack.pop();
+		
+		operation = opStack.top();
+		opStack.pop();
+		
+		if(opStack.top() == ')')
+		    execute(valStack,opStack);
+		
+		result = doOperation(valStack.top(),operation,operandR);
+	    }
+
+	    if(opStack.size() == 1) 
+		result = doOperation(valStack.top(),operation,operandR);
+	}
+	valStack.pop();
+	valStack.push(result); //pushes result onto top of valStack
+    }
+}
+]0;chanj@erdos:proj3[chanj@erdos proj3]$ c[Kmake clean
+rm -f *.o proj3
+]0;chanj@erdos:proj3[chanj@erdos proj3]$ make proj3
+g++ -Wall -std=c++14 -g   -c -o proj3.o proj3.cc
+g++ -Wall -std=c++14 -g -o proj3 proj3.o
+]0;chanj@erdos:proj3[chanj@erdos proj3]$ proj3.[K
+Do you need help (Y/N)? Y
+Enter an infix expression at the prompt.
+The program will tell you its value.
+To stop the program, just hit 'return' at the prompt.
+Expression? 1
+1
+Expression? (1)
+1
+Expression? 2+3
+5
+Expression? 2+3*5
+17
+Expression? (2+3)*5
+25
+Expression? (1+3)*(5-7)
+-8
+Expression? (1+3)*(5-7)/2
+-4
+Expression? ((((1+3))))*(((5-7)))/((2))+1
+-3
+Expression? 
+
+]0;chanj@erdos:proj3[chanj@erdos proj3]$ exit
+exit
+
+Script done on Wed 30 Mar 2016 12:01:00 PM EDT
